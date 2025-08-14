@@ -15,7 +15,7 @@
 
 使用以下命令一键安装：
 ```
-curl -fsSL https://gitee.com/6022463/PodGG/blob/master/install.sh | bash
+curl -fsSL https://gitee.com/6022463/PodGG/raw/master/install.sh | bash
 ```
 ## 使用方法
 
@@ -43,5 +43,5 @@ podgg uninstall
 
 如需更新到最新版本，只需重新执行安装命令即可：
 ```
-curl -fsSL https://gitee.com/6022463/PodGG/blob/master/install.sh | bash
+curl -fsSL https://gitee.com/6022463/PodGG/raw/master/install.sh | bash
 ```    

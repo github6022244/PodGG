@@ -4,7 +4,7 @@
 # 主脚本在仓库中的路径（同一仓库下直接引用文件名）
 SCRIPT_NAME="podgg.sh"
 # 仓库的 raw 基础地址（替换为你的实际仓库地址）
-RAW_BASE_URL="https://gitee.com/6022463/PodGG/master"
+RAW_BASE_URL="https://gitee.com/6022463/PodGG/raw/master"
 
 # 拼接完整的脚本下载地址
 SCRIPT_URL="${RAW_BASE_URL}/${SCRIPT_NAME}"
