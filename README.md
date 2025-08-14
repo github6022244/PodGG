@@ -10,13 +10,13 @@
 - 一键创建符合规范的Pod库结构
 - 简化版本管理和Git配置
 - 智能处理上传过程中的常见问题（如CDN错误、网络超时）
-- 创建完成后自动进入项目目录，符合操作习惯
-- 支持在项目父目录直接执行上传操作
 
 ## 安装
 
 使用以下命令一键安装：
+```
 curl -fsSL https://gitee.com/6022463/PodGG/raw/master/install.sh | bash
+```
 ## 使用方法
 
 ### 创建新Pod库
@@ -42,4 +42,6 @@ podgg uninstall
 ## 更新
 
 如需更新到最新版本，只需重新执行安装命令即可：
-curl -fsSL https://gitee.com/6022463/PodGG/raw/master/install.sh | bash    
+```
+curl -fsSL https://gitee.com/6022463/PodGG/raw/master/install.sh | bash
+```    
