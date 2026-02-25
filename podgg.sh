@@ -496,7 +496,7 @@ upload_pod() {
     # 选择上传模式
     printf "\n%b【代码提交】%b\n" "$BLUE" "$NC"
     printf "1. 自动提交并推送\n"
-    printf "2. 手动处理（已完成请按回车）\n"
+    printf "2. 手动处理（完成后请按回车）\n"
     read -p "请选择 [1/2，默认: 1]: " upload_mode
     upload_mode=${upload_mode:-1}
     
@@ -529,19 +529,19 @@ upload_pod() {
     update_cocoapods_repo
     
     # 私有库检查
-    read -p "这是私有库吗？(y/n，默认: n): " is_private
-    is_private=${is_private:-n}
-    
+    read -p "这是公共库吗？(y/n，默认: y): " is_public
+    is_public=${is_public:-y}
+
     # 验证podspec
     if ! pod spec lint "$podspec_file" --allow-warnings; then
         printf "%bpodspec验证失败%b\n" "$RED" "$NC"
         exit 1
     fi
-    
+
     # 上传并捕获输出和错误
     local upload_success=0
     local upload_output
-    if [ "$is_private" = "y" ]; then
+    if [ "$is_public" != "y" ]; then
         read -p "请输入私有Spec仓库名称: " spec_repo_name
         upload_output=$(pod repo push "$spec_repo_name" "$podspec_file" --allow-warnings 2>&1)
         upload_success=$?
