@@ -207,6 +207,42 @@ configure_git_remote() {
     cd - >/dev/null || exit 1
 }
 
+# 查找主podspec文件
+find_main_podspec() {
+    local git_root="$1"
+    
+    # 1. 首先检查项目根目录下的podspec文件
+    local root_podspecs=()
+    while IFS= read -r -d '' file; do
+        root_podspecs+=("$file")
+    done < <(find "$git_root" -maxdepth 1 -name "*.podspec" -print0)
+    
+    if [ ${#root_podspecs[@]} -gt 0 ]; then
+        # 按文件名排序，选择第一个
+        IFS=$'\n' sorted=($(sort <<<"${root_podspecs[*]}"))
+        unset IFS
+        echo "${sorted[0]}"
+        return 0
+    fi
+    
+    # 2. 如果根目录没有，搜索整个项目，但排除Pods目录
+    local all_podspecs=()
+    while IFS= read -r -d '' file; do
+        all_podspecs+=("$file")
+    done < <(find "$git_root" -name "*.podspec" -not -path "*/Pods/*" -print0)
+    
+    if [ ${#all_podspecs[@]} -gt 0 ]; then
+        # 按文件名排序，选择第一个
+        IFS=$'\n' sorted=($(sort <<<"${all_podspecs[*]}"))
+        unset IFS
+        echo "${sorted[0]}"
+        return 0
+    fi
+    
+    # 3. 如果还是找不到，提示错误
+    return 1
+}
+
 # 上传Pod
 upload_pod() {
     ensure_in_git_repo "upload"
@@ -214,8 +250,8 @@ upload_pod() {
     local git_root=$(get_git_root)
     printf "%b===== 上传Pod =====%b\n" "$BLUE" "$NC"
     
-    # 查找podspec - 只查找主podspec文件，排除备份和缓存文件
-    local podspec_file=$(find "$git_root" -name "*.podspec" -not -name "*.podspec.backup" -not -path "*/Pods/*" | head -n 1)
+    # 查找主podspec文件
+    local podspec_file=$(find_main_podspec "$git_root")
     if [ -z "$podspec_file" ] || [ ! -f "$podspec_file" ]; then
         printf "%b错误：未找到podspec文件%b\n" "$RED" "$NC"
         exit 1
