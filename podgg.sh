@@ -56,6 +56,16 @@ verify_pod_upload() {
     return 1  # 验证失败
 }
 
+# 检查远程仓库是否存在指定tag
+check_remote_tag() {
+    local tag="$1"
+    local remote="${2:-origin}"
+    if git ls-remote --tags "$remote" | grep -q "refs/tags/$tag$"; then
+        return 0  # tag存在
+    fi
+    return 1  # tag不存在
+}
+
 # 获取Git仓库根目录
 get_git_root() {
     local root=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -204,12 +214,14 @@ upload_pod() {
     local git_root=$(get_git_root)
     printf "%b===== 上传Pod =====%b\n" "$BLUE" "$NC"
     
-    # 查找podspec
-    local podspec_file=$(find "$git_root" -name "*.podspec" | head -n 1)
+    # 查找podspec - 只查找主podspec文件，排除备份和缓存文件
+    local podspec_file=$(find "$git_root" -name "*.podspec" -not -name "*.podspec.backup" -not -path "*/Pods/*" | head -n 1)
     if [ -z "$podspec_file" ] || [ ! -f "$podspec_file" ]; then
         printf "%b错误：未找到podspec文件%b\n" "$RED" "$NC"
         exit 1
     fi
+    
+    printf "%b找到podspec文件: %s%b\n" "$GREEN" "$podspec_file" "$NC"
     
     # 提取必要信息
     local pod_name=$(grep -E 's\.name[[:space:]]*=[[:space:]]*["'\''].*["'\'']' "$podspec_file" | sed -E 's/.*s\.name[[:space:]]*=[[:space:]]*["'\''](.*)["'\''].*/\1/' | head -n 1)
@@ -219,6 +231,9 @@ upload_pod() {
         printf "%b错误：无法从podspec提取必要信息%b\n" "$RED" "$NC"
         exit 1
     fi
+    
+    printf "%bPod名称: %s%b\n" "$GREEN" "$pod_name" "$NC"
+    printf "%b版本号: %s%b\n" "$GREEN" "$version" "$NC"
     
     # 验证版本号
     version=$(validate_and_clean_version "$version")
@@ -256,26 +271,39 @@ upload_pod() {
         
         # 处理标签 - 增强版
         printf "\n%b【标签管理】%b\n" "$BLUE" "$NC"
-        if git tag "$version" 2>/dev/null; then
-            printf "%b创建标签 %s 成功%b\n" "$GREEN" "$version" "$NC"
+        
+        # 检查远程仓库是否已存在该tag
+        if check_remote_tag "$version"; then
+            printf "%b标签 %s 已存在于远程仓库%b\n" "$YELLOW" "$version" "$NC"
         else
-            printf "%b标签 %s 已存在%b\n" "$YELLOW" "$version" "$NC"
+            # 检查本地是否已存在该tag
+            if git tag | grep -q "^$version$"; then
+                printf "%b标签 %s 已存在于本地%b\n" "$YELLOW" "$version" "$NC"
+            else
+                # 创建本地tag
+                if git tag "$version"; then
+                    printf "%b创建标签 %s 成功%b\n" "$GREEN" "$version" "$NC"
+                else
+                    printf "%b创建标签 %s 失败%b\n" "$RED" "$version" "$NC"
+                    # 继续执行但标记为警告
+                fi
+            fi
+            
+            # 推送标签到远程仓库
+            if git push origin "$version"; then
+                printf "%b推送标签 %s 到远程仓库成功%b\n" "$GREEN" "$version" "$NC"
+            else
+                printf "%b推送标签 %s 到远程仓库失败%b\n" "$RED" "$version" "$NC"
+                # 继续执行但标记为警告
+            fi
         fi
         
-        # 推送标签并检查结果
-        if git push origin "$version"; then
-            printf "%b推送标签 %s 成功%b\n" "$GREEN" "$version" "$NC"
+        # 最终验证tag是否存在于远程仓库
+        printf "%b验证标签是否存在于远程仓库...%b\n" "$BLUE" "$NC"
+        if check_remote_tag "$version"; then
+            printf "%b标签 %s 已成功存在于远程仓库%b\n" "$GREEN" "$version" "$NC"
         else
-            printf "%b推送标签 %s 失败%b\n" "$RED" "$version" "$NC"
-            # 继续执行但标记为警告
-        fi
-        
-        # 验证tag是否存在于远程仓库
-        printf "%b验证标签是否推送到远程仓库...%b\n" "$BLUE" "$NC"
-        if git ls-remote --tags origin | grep -q "$version"; then
-            printf "%b标签 %s 已成功推送到远程仓库%b\n" "$GREEN" "$version" "$NC"
-        else
-            printf "%b警告：标签 %s 可能未推送到远程仓库%b\n" "$YELLOW" "$version" "$NC"
+            printf "%b警告：标签 %s 可能未成功推送到远程仓库%b\n" "$YELLOW" "$version" "$NC"
             # 继续执行但标记为警告
         fi
     else
